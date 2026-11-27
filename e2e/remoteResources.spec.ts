@@ -124,10 +124,19 @@ test("shows compact remote CPU+RAM pill beside SSH status and opens detailed das
   await expect(dialog.getByRole("group", { name: "Language servers" })).toContainText("rust-analyzer");
   await expect(dialog.getByRole("group", { name: "Other host processes" })).toContainText("dockerd");
 
-  // Hover and end the remote language server process.
+  // Hover, cancel confirmation first, then confirm ending the remote language server process.
   const lspRow = dialog.locator("[title='PID 2048 · 2 processes']");
   await lspRow.hover();
   await lspRow.getByRole("button", { name: "End Process rust-analyzer" }).click();
+  const confirmDialog = page.getByRole("dialog", { name: "End Remote Process" });
+  await expect(confirmDialog).toContainText("End 'rust-analyzer' (PID 2048) and its child processes");
+  await confirmDialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(confirmDialog).toHaveCount(0);
+  await expect(dialog.getByRole("group", { name: "Language servers" })).toContainText("rust-analyzer");
+
+  await lspRow.hover();
+  await lspRow.getByRole("button", { name: "End Process rust-analyzer" }).click();
+  await page.getByRole("dialog", { name: "End Remote Process" }).getByRole("button", { name: "End Process" }).click();
   await expect(dialog.getByRole("group", { name: "Language servers" })).toHaveCount(0);
 
   // Escape dismisses the popover while keeping the status bar pill live.

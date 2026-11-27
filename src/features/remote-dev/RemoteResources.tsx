@@ -1,11 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { executeAction } from "@/platform/actions";
-import { tx } from "@/platform/i18n";
+import { t, tx } from "@/platform/i18n";
 import { isTauri, type HostMetrics, type HostProcess } from "@/platform/ipc";
 import { useProject } from "@/platform/project";
 import { useRemote } from "@/platform/remote";
-import { BarButton, Button, IconButton, Popup, showContextMenu, T } from "@/ui";
+import { BarButton, Button, Dialog, IconButton, Popup, showContextMenu, T } from "@/ui";
 import { formatBytes, formatMs, formatPercent, formatSize, formatUptime } from "@/features/perf/format";
 import { memorySections, type BreakdownRow } from "@/features/perf/memory";
 import { startPolling } from "@/features/perf/poll";
@@ -175,7 +175,15 @@ export function RemoteResources() {
   );
 }
 
-function ProcessRow({ row, trusted }: { row: BreakdownRow; trusted: boolean }) {
+function ProcessRow({
+  row,
+  trusted,
+  onRequestEnd,
+}: {
+  row: BreakdownRow;
+  trusted: boolean;
+  onRequestEnd: (row: BreakdownRow) => void;
+}) {
   const title = row.processes > 1 ? tx`PID ${row.pid} · ${row.processes} processes` : tx`PID ${row.pid}`;
   return (
     <div className={clsx(styles.processRow, styles.indented)} title={title}>
@@ -192,7 +200,7 @@ function ProcessRow({ row, trusted }: { row: BreakdownRow; trusted: boolean }) {
             size="small"
             iconSize={14}
             title={tx`End Process ${row.label}`}
-            onClick={() => void endRemoteProcess(row.pid)}
+            onClick={() => onRequestEnd(row)}
           />
         )}
       </span>
@@ -224,6 +232,7 @@ export function RemoteResourcesDashboard({
 }) {
   const error = useRemoteResources((s) => s.error);
   const trusted = useProject((s) => s.project?.trusted !== false);
+  const [confirmingRow, setConfirmingRow] = useState<BreakdownRow | null>(null);
   const pressure = summarizePressure(m, rttMs);
   const memPct = memoryPercent(m);
   const diskPct = diskUsedPercent(m);
@@ -390,7 +399,7 @@ export function RemoteResourcesDashboard({
                 <span className={styles.end} />
               </div>
               {sec.rows.map((r) => (
-                <ProcessRow key={r.key} row={r} trusted={trusted} />
+                <ProcessRow key={r.key} row={r} trusted={trusted} onRequestEnd={setConfirmingRow} />
               ))}
             </div>
           ))}
@@ -422,6 +431,33 @@ export function RemoteResourcesDashboard({
           <T>Stop Backend</T>
         </Button>
       </div>
+
+      <Dialog
+        open={confirmingRow !== null}
+        blockWorkbenchShortcuts
+        icon="warning"
+        title={tx("End Remote Process")}
+        width={460}
+        onClose={() => setConfirmingRow(null)}
+        buttons={[
+          {
+            label: tx("End Process"),
+            role: "default",
+            autoFocus: true,
+            onClick: () => {
+              const target = confirmingRow;
+              setConfirmingRow(null);
+              if (target) void endRemoteProcess(target.pid);
+            },
+          },
+          { label: t("common.cancel"), role: "cancel" },
+        ]}
+      >
+        {confirmingRow &&
+          (confirmingRow.processes > 1
+            ? tx`End '${confirmingRow.label}' (PID ${confirmingRow.pid}) and its child processes on the remote host?`
+            : tx`End '${confirmingRow.label}' (PID ${confirmingRow.pid}) on the remote host?`)}
+      </Dialog>
     </div>
   );
 }

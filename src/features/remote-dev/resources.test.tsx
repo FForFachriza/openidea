@@ -170,12 +170,28 @@ describe("remote resources widget and dashboard", () => {
     expect(screen.getByRole("group", { name: "Language servers" }).textContent).toContain("rust-analyzer");
     expect(screen.getByRole("group", { name: "Other host processes" }).textContent).toContain("dockerd");
 
-    // Backend and external host processes are never endable; child processes are.
+    // Backend and external host processes are never endable; child processes confirm before ending.
     expect(screen.queryByRole("button", { name: "End Process Backend" })).toBeNull();
     expect(screen.queryByRole("button", { name: "End Process dockerd" })).toBeNull();
     const endLsp = screen.getByRole("button", { name: "End Process rust-analyzer" });
     await act(async () => {
       fireEvent.click(endLsp);
+    });
+    const confirmDialog = screen.getByRole("dialog", { name: "End Remote Process" });
+    expect(confirmDialog.textContent).toContain("End 'rust-analyzer' (PID 200) and its child processes");
+
+    // Cancelling does not end the process.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    });
+    expect(remoteCalls.some((c) => c.cmd === "host_end_process")).toBe(false);
+
+    // Confirming ends the process via host_end_process.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "End Process rust-analyzer" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "End Process" }));
     });
     expect(remoteCalls).toContainEqual({ cmd: "host_end_process", args: { pid: 200 } });
   });

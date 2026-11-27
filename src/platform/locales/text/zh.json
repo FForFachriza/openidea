@@ -10775,5 +10775,9 @@
   "Network": "网络",
   "Other host processes": "主机其他进程",
   "Show Remote Host Resources": "显示远程主机资源",
-  "Shows CPU, memory, network, disk and running processes of the remote host.": "显示远程主机的 CPU、内存、网络、磁盘及运行中的进程。"
+  "Shows CPU, memory, network, disk and running processes of the remote host.": "显示远程主机的 CPU、内存、网络、磁盘及运行中的进程。",
+  "End Remote Process": "结束远程进程",
+  "End '{label}' (PID {pid}) and its child processes on the remote host?": "结束远程主机上的“{label}”（PID {pid}）及其子进程？",
+  "End '{label}' (PID {pid}) on the remote host?": "结束远程主机上的“{label}”（PID {pid}）？",
+  "End Process": "结束进程"
 }
